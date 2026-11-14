@@ -1,0 +1,9 @@
+[Unit]
+Description=新闻联播 Notion 归档同步
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/news-broadcast
+EnvironmentFile=-/opt/news-broadcast/alert.env
+ExecStart=/usr/bin/python3 /opt/news-broadcast/notion_sync.py
