@@ -29,12 +29,23 @@ news-watchdog.timer     # 巡检定时器（白天 30min，18-23 点 10min）
 nginx-news.conf         # nginx 反代配置（127.0.0.1:8765）
 setup.sh                # 一键部署脚本
 sync.sh                 # 本机 → 云端增量同步（scp）
-docs/                   # 每日简报 markdown
+git_sync.sh             # 服务器 → GitHub 自动同步（每日 22:00）
+notion_sync.py          # 简报 → Notion 归档（增量，markdown → Notion blocks）
+docs/                   # 每日简报 markdown（318 期历史归档）
 ```
 
 ## 部署
 ```bash
 sudo bash setup.sh
+```
+
+## 自动化流水线（服务器自持，无需本机在线）
+```
+news-collector.timer  每日 19:30  → collector.py 采集生成简报
+news-catchup.service  每日 20:30  → catchup.py 补漏
+news-gitsync.timer    每日 22:00  → git_sync.sh 推送简报+代码到 GitHub
+news-notion.timer     每日 22:30  → notion_sync.py 归档到 Notion
+news-watchdog.timer   白天 30min / 18-23 点 10min → watchdog.py 巡检告警
 ```
 
 ## 告警链路
@@ -61,6 +72,32 @@ notify.notify(title, body)
 - QQ / 企业微信的 adapter 只存在于 hermes gateway 进程内，外部进程调用
   `hermes send` 会报 `No live adapter`，必须走 `hermes cron --no-agent
   --script` 队列投递。
+
+## Notion 归档
+
+`notion_sync.py` 把 `/opt/news-broadcast/data/*.md` 逐期创建为 Notion 子页面
+（标题 = `YYYY-MM-DD 新闻联播`），markdown 自动转 Notion blocks（heading /
+paragraph / bulleted_list_item）。
+
+配置 `/opt/news-broadcast/alert.env`：
+```ini
+NOTION_TOKEN=secret_xxx
+NOTION_PARENT_PAGE_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+集成需在 Notion 中通过「连接页面」授权父页面。
+
+增量同步：状态文件 `logs/notion_sync_state.json` 记录已同步日期，重跑只补新增。
+```bash
+python3 notion_sync.py             # 增量
+python3 notion_sync.py --limit 10  # 只处理最新 10 期（调试）
+python3 notion_sync.py --force     # 全量重跑
+```
+
+## GitHub 同步
+
+服务器 `/opt/news-broadcast/repo` 是本仓库的 clone，`git_sync.sh` 每次运行会
+把生产目录的代码 + `data/*.md` 同步进仓库并推送 `main`。
+凭据存 `~/.git-credentials`（权限 600），`~/.gitconfig` 配置 `credential.helper=store`。
 
 ## 行情数据源
 腾讯行情，前复权日 K：
