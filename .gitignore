@@ -6,3 +6,5 @@ data/
 alert.env
 *.log
 !docs/*.md
+notion_mcp_state.json
+_headers.json
