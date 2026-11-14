@@ -75,21 +75,30 @@ notify.notify(title, body)
 
 ## Notion 归档
 
-`notion_sync.py` 把 `/opt/news-broadcast/data/*.md` 逐期创建为 Notion 子页面
-（标题 = `YYYY-MM-DD 新闻联播`），markdown 自动转 Notion blocks（heading /
-paragraph / bulleted_list_item）。
+**父页面**：`新闻联播 · A股投资参考简报`（位于 Notion「陈方正投资知识库」下）
+ID `4188dd04-18b0-8147-acac-d9359cf63e67`
 
-配置 `/opt/news-broadcast/alert.env`：
+### 方式一：MCP（推荐，已启用）
+`notion_mcp_sync.js` 通过 Notion 官方 MCP server 批量归档：
+- 认证复用 WorkBuddy 已授权的 Notion 连接器（OAuth），本地解密 `Authorization` 头
+  （算法同 WorkBuddy `CredentialFieldCipher`：hkdf-sha256 + aes-256-gcm，
+  AAD = `userId|connector-states:headerOverrides:notion|Authorization`）
+- 内容用 Notion Markdown 直接提交，由 MCP 转成原生 blocks（heading / 加粗 / 行内代码 / 列表）
+- 批量 5 篇/次，增量状态文件 `notion_mcp_state.json`
+
+```bash
+node notion_mcp_sync.js <docs_dir> [parent_page_id] [--limit N] [--skip-existing]
+```
+
+### 方式二：REST API（备用，需集成 Token）
+`notion_sync.py` 用 Notion REST API + `NOTION_TOKEN`，适合服务器侧无人值守运行：
 ```ini
 NOTION_TOKEN=secret_xxx
 NOTION_PARENT_PAGE_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
-集成需在 Notion 中通过「连接页面」授权父页面。
-
-增量同步：状态文件 `logs/notion_sync_state.json` 记录已同步日期，重跑只补新增。
 ```bash
 python3 notion_sync.py             # 增量
-python3 notion_sync.py --limit 10  # 只处理最新 10 期（调试）
+python3 notion_sync.py --limit 10  # 只处理最新 10 期
 python3 notion_sync.py --force     # 全量重跑
 ```
 
