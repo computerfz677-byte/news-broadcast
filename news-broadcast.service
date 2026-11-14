@@ -1,0 +1,23 @@
+[Unit]
+Description=新闻联播 A股情报看板
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/news-broadcast
+Environment=NEWS_DATA_DIR=/opt/news-broadcast/data
+Environment=NEWS_NO_BROWSER=1
+Environment=NEWS_PORT=8765
+ExecStartPre=/bin/sleep 1
+ExecStartPre=/usr/bin/python3 -c "import os; p='/opt/news-broadcast/data/.看板端口.lock'; os.path.exists(p) and os.remove(p)"
+ExecStart=/usr/bin/python3 /opt/news-broadcast/app.py
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=15
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

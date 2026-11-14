@@ -1,0 +1,24 @@
+[Unit]
+Description=新闻联播看板看门狗（巡检并通过 Bark/ntfy 推送告警）
+After=network-online.target news-broadcast.service
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=-/opt/news-broadcast/alert.env
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/news-broadcast
+Environment=NEWS_DATA_DIR=/opt/news-broadcast/data
+Environment=NEWS_LOG_DIR=/opt/news-broadcast/logs
+Environment=NEWS_PORT=8765
+Environment=NEWS_GATEWAY_URL=http://127.0.0.1:8091
+Environment=NEWS_NTFY_SERVER=http://127.0.0.1:8092
+Environment=NEWS_NTFY_TOPIC=cfz-alert
+Environment=NEWS_GATEWAY_GROUP=部署验收
+Environment=NEWS_ALERT_DEDUP_SEC=1800
+ExecStart=/usr/bin/python3 /opt/news-broadcast/watchdog.py
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

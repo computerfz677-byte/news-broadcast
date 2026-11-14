@@ -1,0 +1,28 @@
+[Unit]
+Description=新闻联播云端采集器（每日 19:20 抓央视网 + AI 生成简报）
+Documentation=file:///opt/news-broadcast/collector.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=-/opt/news-broadcast/alert.env
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/news-broadcast
+Environment=NEWS_DATA_DIR=/opt/news-broadcast/data
+Environment=NEWS_LOG_DIR=/opt/news-broadcast/logs
+Environment=NEWS_LLM_ENV=/home/ubuntu/daily_stock_analysis/.env
+# 告警通道（复用本机 bark-gateway + 自建 ntfy）
+Environment=NEWS_GATEWAY_URL=http://127.0.0.1:8091
+Environment=NEWS_NTFY_SERVER=http://127.0.0.1:8092
+Environment=NEWS_NTFY_TOPIC=cfz-alert
+Environment=NEWS_GATEWAY_GROUP=部署验收
+Environment=NEWS_ALERT_DEDUP_SEC=1800
+Environment=NEWS_ALERT_HOST=sh-43.142.99.125
+ExecStart=/usr/bin/python3 /opt/news-broadcast/collector.py
+# 生成失败不阻塞：下次 timer 会再试（若当天已有文件则跳过）
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

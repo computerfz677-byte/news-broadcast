@@ -1,0 +1,13 @@
+[Unit]
+Description=新闻联播看板看门狗定时巡检
+
+[Timer]
+# 白天每 30 分钟巡检；晚间采集窗口（18:00-23:00）加密到 10 分钟
+OnCalendar=*:0/30
+OnCalendar=*-*-* 18:00:00-23:00:00/10
+Persistent=true
+AccuracySec=1min
+Unit=news-watchdog.service
+
+[Install]
+WantedBy=timers.target

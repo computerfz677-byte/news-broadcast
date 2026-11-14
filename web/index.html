@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新闻联播 · A股情报看板</title>
+<style>
+:root{
+  --bg:#f4f6fa; --card:#fff; --border:#e5eaf1; --text:#1e2733; --muted:#7c8798;
+  --primary:#2563eb; --primary-soft:#eef4ff; --hot:#e11d48; --hot-soft:#fff1f4;
+  --green:#16a34a; --amber:#d97706; --amber-soft:#fff8ec; --shadow:0 1px 3px rgba(20,40,80,.06),0 6px 20px rgba(20,40,80,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.6}
+.wrap{max-width:1400px;margin:0 auto;padding:20px 24px 60px}
+header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#2563eb,#e11d48);color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;box-shadow:var(--shadow)}
+h1{font-size:19px;font-weight:700;letter-spacing:.3px}
+.sub{font-size:12px;color:var(--muted);margin-top:1px}
+.hdr-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{font-family:inherit;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);padding:7px 13px;border-radius:8px;transition:.15s;white-space:nowrap}
+button:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+button.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+button.primary:hover{background:#1d4fd8;color:#fff}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+button.ghost:hover{color:var(--hot);background:var(--hot-soft)}
+button:disabled{opacity:.55;cursor:not-allowed}
+.pill{font-size:12px;padding:5px 11px;border-radius:20px;background:var(--card);border:1px solid var(--border);color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot.ok{background:var(--green)} .dot.warn{background:var(--amber)} .dot.off{background:#b6c0cf}
+
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.card .k{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.card .v{font-size:26px;font-weight:700;margin-top:6px;line-height:1.2;font-variant-numeric:tabular-nums}
+.card .v small{font-size:13px;font-weight:500;color:var(--muted);margin-left:3px}
+.card .f{font-size:11px;color:var(--muted);margin-top:5px}
+.card.hl .v{color:var(--hot)}
+.card.blue .v{color:var(--primary)}
+
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:16px}
+.tab{padding:10px 20px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;border-radius:0;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab:hover{color:var(--text);background:none}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab .cnt{font-size:11px;font-weight:600;background:var(--bg);border-radius:10px;padding:1px 7px;margin-left:6px;color:var(--muted)}
+.tab.active .cnt{background:var(--primary-soft);color:var(--primary)}
+.panel{display:none} .panel.active{display:block}
+
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.search{flex:1;min-width:220px;max-width:380px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;outline:none}
+.search:focus{border-color:var(--primary)}
+select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer}
+.hint{font-size:12px;color:var(--muted);margin-left:auto}
+
+.tblbox{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:auto;box-shadow:var(--shadow)}
+.tblbox table.perf{table-layout:fixed;min-width:1500px}
+.up{color:var(--hot);font-weight:600}.down{color:var(--green);font-weight:600}.flat{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#fafbfe;color:var(--muted);font-weight:600;font-size:12px;text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:2}
+td{padding:10px 14px;border-bottom:1px solid #f0f3f8;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#f7faff}
+tbody tr.clickable{cursor:pointer}
+tbody tr.sel{background:var(--primary-soft)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.date{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.wk{color:var(--muted);font-size:11px;margin-left:5px;font-weight:400}
+.badge{font-size:11px;padding:2px 8px;border-radius:5px;white-space:nowrap;font-weight:600}
+.badge.today{background:var(--hot-soft);color:var(--hot)}
+.badge.latest{background:var(--primary-soft);color:var(--primary)}
+.topic{color:var(--muted);font-size:12px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini{font-size:12px;padding:4px 9px;border-radius:6px}
+.link{color:var(--primary);cursor:pointer;text-decoration:none}
+.link:hover{text-decoration:underline}
+.heat{display:inline-block;height:6px;border-radius:3px;background:var(--hot);vertical-align:middle;margin-right:6px;min-width:3px}
+.code{font-family:Consolas,"Courier New",monospace;font-weight:600;letter-spacing:.4px;font-variant-numeric:tabular-nums}
+.sector{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);padding:2px 7px;border-radius:5px;white-space:nowrap}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+
+/* 新闻查看 */
+.viewer{display:grid;grid-template-columns:290px 1fr;gap:14px;align-items:start}
+.side{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.side-hd{padding:11px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);font-weight:600;background:#fafbfe}
+.side-list{max-height:74vh;overflow:auto}
+.side-item{padding:9px 14px;border-bottom:1px solid #f0f3f8;cursor:pointer;display:flex;align-items:center;gap:8px}
+.side-item:hover{background:#f7faff}
+.side-item.active{background:var(--primary-soft);border-left:3px solid var(--primary);padding-left:11px}
+.side-item .d{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.side-item .t{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.doc{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);min-height:400px}
+.doc-hd{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.doc-hd .ttl{font-size:15px;font-weight:700}
+.doc-hd .meta{font-size:11px;color:var(--muted);margin-top:2px}
+.doc-body{padding:22px 30px 46px;max-height:76vh;overflow:auto}
+.md{font-size:14px;line-height:1.85;color:#2a3442}
+.md h1{font-size:22px;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid var(--primary);color:#16202e}
+.md h2{font-size:17px;margin:26px 0 12px;padding-left:11px;border-left:4px solid var(--primary);color:#16202e}
+.md h3{font-size:15px;margin:20px 0 9px;color:var(--primary)}
+.md h4{font-size:14px;margin:16px 0 8px}
+.md p{margin:9px 0}
+.md ul,.md ol{margin:9px 0 9px 22px}
+.md li{margin:4px 0}
+.md blockquote{border-left:3px solid #cbd5e5;background:#f8fafd;padding:8px 14px;margin:12px 0;color:var(--muted);border-radius:0 7px 7px 0;font-size:13px}
+.md hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+.md strong{color:#16202e;font-weight:700}
+.md code{background:#f1f4f9;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:12px;color:var(--hot)}
+.md pre{background:#f6f8fc;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;font-size:12px}
+.md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+.md th{background:#f3f6fc;position:static;border:1px solid var(--border);padding:8px 11px;color:#3d4a5c;font-size:12px}
+.md td{border:1px solid var(--border);padding:8px 11px;vertical-align:top}
+.md tr:hover td{background:#fafcff}
+.md .disclaimer{background:var(--amber-soft);border:1px solid #f6dfb8;border-radius:8px;padding:12px 15px;color:#92631a;font-size:13px;margin-top:20px}
+
+/* 标的弹层 */
+.mask{display:none;position:fixed;inset:0;background:rgba(16,26,44,.42);z-index:50;align-items:center;justify-content:center;padding:24px}
+.mask.show{display:flex}
+.modal{background:var(--card);border-radius:14px;max-width:640px;width:100%;max-height:78vh;overflow:auto;box-shadow:0 20px 60px rgba(10,20,40,.25)}
+.modal-hd{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card)}
+.modal-hd b{font-size:16px}
+.modal-bd{padding:18px 22px 26px}
+.dayrow{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f0f3f8;align-items:flex-start;font-size:13px}
+.dayrow:last-child{border:none}
+.dayrow .dd{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;color:var(--primary);cursor:pointer}
+.dayrow .rr{color:var(--muted);flex:1}
+
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e2733;color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;opacity:0;transition:.25s;z-index:99;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.spin{text-align:center;padding:50px;color:var(--muted);font-size:13px}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.viewer{grid-template-columns:1fr}.side-list{max-height:220px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">联</div>
+      <div>
+        <h1>新闻联播 · A股情报看板</h1>
+        <div class="sub">每日 22:00 自动采集 · 逐字稿 / 板块分析 / 跟踪标的</div>
+      </div>
+    </div>
+    <div class="hdr-actions">
+      <span class="pill" id="todayPill"><span class="dot off"></span>检查中</span>
+      <span class="pill" id="syncPill" title="自动从定时任务产出目录同步最新简报">⏱ 未同步</span>
+      <button class="primary" onclick="doSync()">↻ 立即采集</button>
+      <button onclick="toggleAuto()" id="autoBtn">开机自启：—</button>
+      <button class="ghost" onclick="apiPost('/api/reveal')" title="打开本文件夹">📂 文件夹</button>
+      <button class="ghost" onclick="quitApp()" title="退出看板程序">⏻ 退出</button>
+    </div>
+  </header>
+
+  <div class="cards">
+    <div class="card blue"><div class="k">📰 简报期数</div><div class="v" id="cFiles">—</div><div class="f" id="cRange">—</div></div>
+    <div class="card hl"><div class="k">🎯 跟踪标的（去重）</div><div class="v" id="cStocks">—</div><div class="f">全部简报涉及过的股票/ETF</div></div>
+    <div class="card"><div class="k">📅 今日简报</div><div class="v" id="cToday">—</div><div class="f" id="cTodayF">—</div></div>
+    <div class="card"><div class="k">🔄 最近采集</div><div class="v" id="cSync" style="font-size:17px">—</div><div class="f" id="cSyncF">每 60 秒自动检查一次</div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-p="p1" onclick="switchTab('p1')">📋 文件清单<span class="cnt" id="t1">—</span></div>
+    <div class="tab" data-p="p3" onclick="switchTab('p3')">🎯 跟踪标的<span class="cnt" id="t3">—</span></div>
+    <div class="tab" data-p="p4" onclick="switchTab('p4')">📚 历史合集<span class="cnt" id="t4">—</span></div>
+  </div>
+
+  <!-- Tab 1 文件清单 -->
+  <div class="panel active" id="p1">
+    <div class="toolbar">
+      <input class="search" id="q1" placeholder="搜索日期 / 主题 / 文件名…" oninput="renderFiles()">
+      <select id="f1" onchange="renderFiles()">
+        <option value="all">全部期数</option>
+        <option value="today">仅今日</option>
+        <option value="month">近 30 天</option>
+        <option value="hasStock">含标的</option>
+      </select>
+      <span class="hint" id="h1">点击任意一行查看当日新闻 →</span>
+    </div>
+    <div class="tblbox"><table>
+      <thead><tr><th>日期</th><th>状态</th><th class="num">条目</th><th class="num">标的</th><th class="num">大小</th><th>一句话主题 / 摘要</th><th>操作</th></tr></thead>
+      <tbody id="tb1"><tr><td colspan="7"><div class="spin">加载中…</div></td></tr></tbody>
+    </table></div>
+  </div>
+
+  <!-- Tab 3 跟踪标的 -->
+  <div class="panel" id="p3">
+    <div class="toolbar">
+      <input class="search" id="q3" placeholder="搜索代码 / 名称 / 板块…" oninput="renderStocks()">
+      <select id="f3" onchange="renderStocks()">
+        <option value="count">按出现次数排序</option>
+        <option value="last">按最近出现排序</option>
+        <option value="code">按代码排序</option>
+        <option value="min2">仅看 ≥2 次</option>
+      </select>
+      <span class="hint" id="h3">点击「出现次数」查看被提及的全部日期 →</span>
+    </div>
+    <div class="tblbox"><table class="perf">
+      <colgroup>
+        <col style="width:42px"><col style="width:72px"><col style="width:88px"><col style="width:96px"><col style="width:92px"><col style="width:88px"><col style="width:88px">
+        <col style="width:54px"><col style="width:54px"><col style="width:54px"><col style="width:54px"><col style="width:54px"><col style="width:60px"><col style="width:60px">
+        <col style="width:340px"><col style="width:64px"><col style="width:64px"><col style="width:66px">
+      </colgroup>
+      <thead><tr>
+        <th class="num">#</th><th>代码</th><th>名称</th><th>板块</th><th>出现次数</th><th>首次</th><th>最近</th>
+        <th class="num">1日</th><th class="num">2日</th><th class="num">3日</th><th class="num">4日</th><th class="num">5日</th><th class="num">10日</th><th class="num">30日</th>
+        <th>最近入选理由</th>
+        <th class="num">均3日</th><th class="num">均5日</th><th class="num">均10日</th>
+      </tr></thead>
+      <tbody id="tb3"><tr><td colspan="18"><div class="spin">汇总中…</div></td></tr></tbody>
+    </table></div>
+  </div>
+
+  <!-- Tab 4 历史合集 -->
+  <div class="panel" id="p4">
+    <div class="toolbar">
+      <input class="search" id="q4" placeholder="搜索日期 / 主题 / 正文关键词（全量历史）…" oninput="renderCombo()">
+      <span class="hint" id="h4">点击左侧日期查看当日全文 →</span>
+    </div>
+    <div class="viewer">
+      <div class="side">
+        <div class="side-hd">📚 历史合集 <span id="comboCnt" style="float:right;font-weight:400"></span></div>
+        <div class="side-list" id="comboList"></div>
+      </div>
+      <div class="doc">
+        <div class="doc-hd">
+          <div><div class="ttl" id="comboTtl">请选择左侧日期查看</div><div class="meta" id="comboMeta"></div></div>
+          <div style="display:flex;gap:7px">
+            <button class="mini" onclick="prevCombo()">← 前一天</button>
+            <button class="mini" onclick="nextCombo()">后一天 →</button>
+            <button class="mini" onclick="openComboRaw()">📄 打开原文件</button>
+          </div>
+        </div>
+        <div class="doc-body" id="comboBody"><div class="empty">👈 从左侧列表点选一期简报，或在搜索框按正文关键词检索</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mask" id="mask" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hd"><b id="mTtl">标的明细</b><button class="ghost" onclick="closeModal()">✕ 关闭</button></div>
+    <div class="modal-bd" id="mBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let FILES=[], STOCKS=[], CUR='', STATUS={};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function api(path){const r=await fetch(path);return r.json()}
+async function apiPost(path,data){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})});return r.json()}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600)}
+
+function switchTab(p){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.p===p));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===p));
+  if(p==='p3'&&!STOCKS.length) loadStocks();
+  if(p==='p4'&&!COMBO.length) loadCombo();
+}
+
+async function loadStatus(){
+  try{
+    STATUS=await api('/api/status');
+    $('cFiles').innerHTML=STATUS.total_files+'<small>期</small>';
+    $('cRange').textContent=STATUS.date_min&&STATUS.date_max?STATUS.date_min+' ~ '+STATUS.date_max:'—';
+    $('t1').textContent=STATUS.total_files;
+    const tp=$('todayPill');
+    if(STATUS.today_ready){tp.innerHTML='<span class="dot ok"></span>今日 '+STATUS.today+' 已生成';$('cToday').textContent='已生成';$('cToday').style.color='var(--green)';$('cTodayF').textContent='今日简报已入库'}
+    else{tp.innerHTML='<span class="dot warn"></span>今日 '+STATUS.today+' 待生成';$('cToday').textContent='待生成';$('cToday').style.color='var(--amber)';$('cTodayF').textContent='22:00 定时任务自动产出'}
+    const sr=STATUS.sync_result||{};
+    const n=(sr.added||[]).length+(sr.updated||[]).length;
+    $('syncPill').innerHTML='⏱ '+(STATUS.last_sync?STATUS.last_sync.slice(11,16):'未同步')+(n?' (+'+n+')':'');
+    $('cSync').textContent=STATUS.last_sync?STATUS.last_sync.slice(5,16):'尚未同步';
+    $('cSyncF').textContent='数据源：'+ (STATUS.source_dir||'—');
+    $('autoBtn').textContent='开机自启：'+(STATUS.autostart?'开 ✅':'关');
+  }catch(e){console.error(e)}
+}
+
+async function loadFiles(){
+  const d=await api('/api/files');FILES=d.files||[];
+  $('t1').textContent=FILES.length;
+  renderFiles();
+}
+function fmtSize(b){return b>1024?(b/1024).toFixed(1)+' KB':b+' B'}
+function renderFiles(){
+  const q=($('q1').value||'').trim().toLowerCase(), f=$('f1').value;
+  let list=FILES.filter(x=>{
+    if(f==='today'&&!x.is_today)return false;
+    if(f==='month'){const d=new Date(x.date),n=new Date();if((n-d)/864e5>30)return false}
+    if(f==='hasStock'&&!x.stock_count)return false;
+    if(q&&!(x.date+' '+x.topic+' '+x.name).toLowerCase().includes(q))return false;
+    return true;
+  });
+  $('h1').textContent='共 '+list.length+' 期 · 点击任意一行查看当日新闻 →';
+  if(!list.length){$('tb1').innerHTML='<tr><td colspan="7"><div class="empty">没有匹配的简报</div></td></tr>';return}
+  $('tb1').innerHTML=list.map(x=>`<tr class="clickable" onclick="openFileInCombo('${esc(x.name)}')">
+    <td class="date">${esc(x.date)}<span class="wk">周${esc(x.weekday)}</span></td>
+    <td>${x.is_today?'<span class="badge today">今日</span>':(x.is_latest?'<span class="badge latest">最新</span>':'<span style="color:var(--muted);font-size:11px">历史</span>')}</td>
+    <td class="num">${x.items||'—'}</td><td class="num">${x.stock_count?'<b style="color:var(--hot)">'+x.stock_count+'</b>':'—'}</td>
+    <td class="num" style="color:var(--muted)">${fmtSize(x.size)}</td>
+    <td><div class="topic" title="${esc(x.topic)}">${esc(x.topic)||'<span style="color:#b6c0cf">—</span>'}</div></td>
+    <td><button class="mini" onclick="event.stopPropagation();openFileInCombo('${esc(x.name)}')">查看 →</button></td></tr>`).join('');
+}
+
+/* 从文件清单 / 弹层跳转：打开「历史合集」并定位到该期 */
+function openFileInCombo(name){
+  const f=FILES.find(x=>x.name===name); if(!f)return;
+  if(!COMBO.length){ loadCombo().then(()=>{switchTab('p4');openCombo(f.date)}); }
+  else { switchTab('p4'); openCombo(f.date); }
+}
+function openComboRaw(){ if(CUR4){ apiPost('/api/open',{name:CUR4+'新闻联播元宝.md'}); } }
+
+async function doSync(){
+  const b=event.target;b.disabled=true;b.textContent='采集中…';
+  try{const r=await apiPost('/api/sync');
+    const n=(r.added||[]).length+(r.updated||[]).length;
+    toast(n?('✅ 采集完成：新增 '+(r.added||[]).length+' 期，更新 '+(r.updated||[]).length+' 期'):'✅ 已是最新，无新增简报');
+    await loadStatus();await loadFiles();if(!STOCKS.length)await loadStocks();
+  }catch(e){toast('采集失败：'+e.message)}
+  b.disabled=false;b.textContent='↻ 立即采集';
+}
+async function toggleAuto(){
+  const on=!STATUS.autostart;const r=await apiPost('/api/autostart',{enable:on});
+  toast(r.ok?(on?'✅ 已设置开机自启，每天自动采集':'已关闭开机自启'):'⚠ 设置失败（权限不足）');
+  await loadStatus();
+}
+async function quitApp(){
+  if(!confirm('退出看板程序？关闭后自动采集将暂停，下次双击 exe 可重新启动。'))return;
+  try{await apiPost('/api/shutdown')}catch(e){}
+  document.body.innerHTML='<div style="text-align:center;padding:120px;font-size:16px;color:#7c8798">看板已退出，可关闭此页面 ✅</div>';
+}
+
+async function loadStocks(){
+  const d=await api('/api/stocks');STOCKS=d.stocks||[];
+  $('t3').textContent=STOCKS.length;$('cStocks').innerHTML=STOCKS.length+'<small>只</small>';
+  renderStocks();
+}
+function pct(v){ if(v==null||isNaN(v)) return '<span class="flat">—</span>'; const s=(v>0?'+':'')+(v*100).toFixed(1)+'%'; const cls=v>0?'up':(v<0?'down':'flat'); return '<span class="'+cls+'">'+s+'</span>'; }
+function pctCell(v){ return '<td class="num">'+pct(v)+'</td>'; }
+function renderStocks(){
+  const q=($('q3').value||'').trim().toLowerCase(),f=$('f3').value;
+  let list=STOCKS.filter(x=>{
+    if(f==='min2'&&x.count<2)return false;
+    if(q&&!(x.code+' '+x.name+' '+x.sector).toLowerCase().includes(q))return false;
+    return true;
+  });
+  if(f==='last')list.sort((a,b)=>b.last_date.localeCompare(a.last_date));
+  else if(f==='code')list.sort((a,b)=>a.code.localeCompare(b.code));
+  else list.sort((a,b)=>b.count-a.count||a.code.localeCompare(b.code));
+  $('h3').textContent='共 '+list.length+' 只 · 点击「出现次数」查看被提及的全部日期 →';
+  const max=STOCKS.length?STOCKS[0].count:1;
+  if(!list.length){$('tb3').innerHTML='<tr><td colspan="18"><div class="empty">没有匹配的标的</div></td></tr>';return}
+  $('tb3').innerHTML=list.map((x,i)=>{
+    const lr=x.last_ret||{}, ar=x.avg_ret||{};
+    const rets=[1,2,3,4,5,10,30].map(n=>pctCell(lr[n])).join('');
+    const avgs=[3,5,10].map(n=>pctCell(ar[n])).join('');
+    return `<tr>
+      <td class="num" style="color:var(--muted)">${i+1}</td>
+      <td class="code">${esc(x.code)}</td><td><b>${esc(x.name)}</b></td>
+      <td><span class="sector">${esc(x.sector)||'—'}</span></td>
+      <td><span class="heat" style="width:${Math.max(4,Math.round(x.count/max*30))}px;opacity:${.35+.65*x.count/max};vertical-align:middle"></span><a class="link" onclick="showStock('${esc(x.code)}')">${x.count} 次</a></td>
+      <td class="date" style="font-size:12px;color:var(--muted)">${esc(x.first_date)}</td>
+      <td class="date" style="font-size:12px">${esc(x.last_date)}</td>
+      ${rets}
+      <td style="font-size:12px;line-height:1.5;color:#3d4a5c;vertical-align:top"><div style="white-space:normal;word-break:break-word">${esc(x.last_reason)||'—'}</div></td>
+      ${avgs}
+    </tr>`;
+  }).join('');
+}
+function showStock(code){
+  const x=STOCKS.find(s=>s.code===code);if(!x)return;
+  $('mTtl').innerHTML=`<span class="code">${esc(x.code)}</span> ${esc(x.name)} <span class="sector" style="margin-left:8px">${esc(x.sector)}</span> <span style="color:var(--hot);font-size:13px;margin-left:8px">共 ${x.count} 期</span>`;
+  $('mBody').innerHTML='<div style="color:var(--muted);font-size:12px;margin-bottom:12px">点击日期可跳转查看当日简报</div>'+
+    (x.dates||[]).map(d=>{const f=FILES.find(z=>z.date===d);return `<div class="dayrow"><span class="dd" onclick="jump('${esc(d)}')">${esc(d)} →</span><span class="rr">${esc(f&&f.topic?f.topic:'')}</span></div>`}).join('');
+  $('mask').classList.add('show');
+}
+function jump(d){const f=FILES.find(z=>z.date===d);if(f){closeModal();if(!COMBO.length){loadCombo().then(()=>{switchTab('p4');openCombo(d)})}else{switchTab('p4');openCombo(d)}}}
+function closeModal(){$('mask').classList.remove('show')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+/* ---- Tab4 历史合集：全量历史离线浏览/检索 ---- */
+let COMBO=[], CUR4='';
+async function loadCombo(){
+  try{
+    const d=await api('/api/all');COMBO=d.files||[];
+    $('t4').textContent=COMBO.length;$('comboCnt').textContent=COMBO.length+' 期';
+    renderCombo();
+  }catch(e){$('comboList').innerHTML='<div class="empty" style="padding:24px">加载失败：'+esc(e.message)+'</div>'}
+}
+function renderCombo(){
+  const q=($('q4').value||'').trim().toLowerCase();
+  const list=COMBO.filter(x=>!q||(x.date+' '+(x.topic||'')+' '+(x.md||'')).toLowerCase().includes(q));
+  $('h4').textContent='共 '+list.length+' 期 · 搜索日期/主题/正文 →';
+  $('comboCnt').textContent=COMBO.length+' 期';
+  if(!list.length){$('comboList').innerHTML='<div class="empty" style="padding:24px">没有匹配</div>';return}
+  $('comboList').innerHTML=list.map(x=>`<div class="side-item ${CUR4===x.date?'active':''}" onclick="openCombo('${esc(x.date)}')">
+    <span class="d">${esc(x.date)}</span><span class="t">${esc(x.topic)||'—'}</span></div>`).join('');
+}
+function openCombo(date){
+  const x=COMBO.find(z=>z.date===date);if(!x)return;CUR4=date;
+  $('comboTtl').textContent=x.date+' 新闻联播 · A股投资参考简报';
+  $('comboMeta').textContent='周'+x.weekday+' · 全文 '+(x.md?x.md.length:0)+' 字';
+  $('comboBody').innerHTML='<div class="md">'+md2html(x.md)+'</div>';
+  $('comboBody').scrollTop=0;
+  renderCombo();
+}
+function prevCombo(){const i=COMBO.findIndex(z=>z.date===CUR4);if(i<0)return openCombo(COMBO[0].date);if(i<COMBO.length-1)openCombo(COMBO[i+1].date);else toast('已经是最早一期')}
+function nextCombo(){const i=COMBO.findIndex(z=>z.date===CUR4);if(i<=0)return toast('已经是最新一期');openCombo(COMBO[i-1].date)}
+
+/* ---- 轻量 Markdown 渲染（离线，无依赖）---- */
+function md2html(src){
+  const lines=String(src).replace(/\r/g,'').split('\n');
+  let out=[],i=0,inCode=false,codeBuf=[];
+  const inline=s=>esc(s)
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g,'<em>$1</em>');
+  while(i<lines.length){
+    let l=lines[i];
+    if(/^\s*```/.test(l)){if(inCode){out.push('<pre><code>'+esc(codeBuf.join('\n'))+'</code></pre>');codeBuf=[];inCode=false}else{inCode=true}i++;continue}
+    if(inCode){codeBuf.push(l);i++;continue}
+    if(/^\s*$/.test(l)){i++;continue}
+    if(/^\s*---+\s*$/.test(l)){out.push('<hr>');i++;continue}
+    let m=l.match(/^(#{1,4})\s+(.*)$/);
+    if(m){const n=m[1].length;let t=inline(m[2]);if(/免责声明/.test(t))out.push('<div class="disclaimer">'+t+'</div>');else out.push(`<h${n}>${t}</h${n}>`);i++;continue}
+    // 表格
+    if(/^\s*\|/.test(l)){
+      let rows=[];
+      while(i<lines.length&&/^\s*\|/.test(lines[i])){rows.push(lines[i].trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim()));i++}
+      if(rows.length>1&&rows[1].every(c=>/^:?-{2,}:?$/.test(c.replace(/\s/g,'')))){
+        const hd=rows[0],body=rows.slice(2);
+        out.push('<table><thead><tr>'+hd.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead><tbody>'+
+          body.map(r=>'<tr>'+hd.map((_,k)=>'<td>'+inline(r[k]||'')+'</td>').join('')+'</tr>').join('')+'</tbody></table>');
+      }else{
+        out.push('<table><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+inline(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table>');
+      }
+      continue;
+    }
+    // 引用
+    if(/^\s*>/.test(l)){
+      let buf=[];
+      while(i<lines.length&&/^\s*>/.test(lines[i])){buf.push(lines[i].replace(/^\s*>\s?/,''));i++}
+      let txt=inline(buf.join(' '));
+      if(/免责声明|不构成投资建议|股市有风险/.test(txt))out.push('<div class="disclaimer">'+txt+'</div>');
+      else out.push('<blockquote>'+txt+'</blockquote>');
+      continue;
+    }
+    // 列表
+    if(/^\s*([-*+]|\d+[\.、])\s+/.test(l)){
+      const ordered=/^\s*\d+/.test(l);let buf=[];
+      while(i<lines.length&&/^\s*([-*+]|\d+[\.、])\s+/.test(lines[i])){buf.push(lines[i].replace(/^\s*(?:[-*+]|\d+[\.、])\s+/,''));i++}
+      out.push('<'+(ordered?'ol':'ul')+'>'+buf.map(x=>'<li>'+inline(x)+'</li>').join('')+'</'+(ordered?'ol':'ul')+'>');
+      continue;
+    }
+    out.push('<p>'+inline(l)+'</p>');i++;
+  }
+  if(codeBuf.length)out.push('<pre><code>'+esc(codeBuf.join('\n'))+'</code></pre>');
+  return out.join('\n');
+}
+
+(async function init(){
+  await loadStatus();
+  await loadFiles();
+  loadStocks();
+  setInterval(async()=>{await loadStatus()},60000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+[Unit]
+Description=新闻联播采集定时器（每日多次触发，采集器自身做幂等跳过）
+
+[Timer]
+# 19:20 主触发（19:00 播出，留 20 分钟等央视网上线）
+# 后续为重试窗口：网络抖动/央视网延迟上线时兜底
+OnCalendar=*-*-* 19:20:00
+OnCalendar=*-*-* 19:50:00
+OnCalendar=*-*-* 20:30:00
+OnCalendar=*-*-* 21:30:00
+OnCalendar=*-*-* 23:30:00
+# 服务器重启后补跑（错过的窗口）
+Persistent=true
+AccuracySec=1min
+Unit=news-collector.service
+
+[Install]
+WantedBy=timers.target
